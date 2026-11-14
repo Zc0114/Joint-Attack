@@ -1,0 +1,89 @@
+experiment_config:
+  seed: [ 42 ]
+  device: "cuda"
+  train_model: 1                                                       #是否进行联邦学习训练
+  local_eval: 1                                                        #多久评估全局模型
+  global_eval: 1                                                       #多久评估一次本地模型
+  save_model: 5
+  model_path: './mnist/changeinterval/noiid-8-backdoor1-0.00002-6-3'   #会创建一个目录里面会保存各种文件
+  model_name: 'LeNet5'                                                 #模型名
+---
+attack_settings:
+  passive_attack: 1                                                    #是否进行成员推理攻击
+  stable_in: 1                                                         #攻击者是否一直被选中
+  normal_training: 1                                                   #攻击者是否正常训练
+  active_attack: 2                                                     #主动攻击的间隔轮数
+  start_index: [5,100]                                                 #主动攻击的开始轮数和结束轮数
+  eval_attack: 1                                                       #多久评估一次攻击模型性能既成员推理结果（建议是1）可能画图
+  save_attack_model: 3                                                 #多久保存一次成员推理模型
+  attack_data_target_overlap_with: 'all'             
+  train_batch_size: 64                    
+  test_batch_size: 64    
+  attack_loss_function: 'MSELoss'      
+  attack_optimizer: 'Adam'            
+  active_learning_rate: 0.00002                                         #主动攻击既梯度上升，或后门攻击时，修改本地模型时所用的学习率，梯度上升时不应该太高 
+  attack_data_distribution: [200, 200, 200, 200 ]                       #成员推理使用的辅助数据集大小
+  observed_target_models: [30,70,100]
+  attack_model_path: './models/attack/'
+  attack_local_epoch: 5                                                 #梯度上升时进行的轮数
+  attack_model_learning_rate: 0.0002                                    #成员推理模型的学习率
+  is_gradient_ascent: 0                                                 #是否进行梯度上升1进行0不进行
+  save_information_count: 50                                            #多久显示一次成员推理信息
+  backdoor_way: 1                                                      
+  a_b_ab: 3
+  backdoor_epoch: 3                                                     #后门攻击时进行的轮数
+  is_plot: 0
+  chosemaxdiff: 0
+  maxdiff: [5,300,5]
+  other_training: 0
+  poison_dataset: 0
+  ratio: 0.5                                                            #后门攻击或梯度上升时使用攻击者本地数据集的比例（比例太高时会变的很慢，因为触发器改变时是一张一张图片进行计算的）
+---
+training_settings:
+  local_epoch: 4                                                        #本地模型训练轮数                       
+  number_of_clients: 5                                                  #客户端数量
+  proportion_clients: 1                                                 #每次选择客户端比例
+  client_data_overlap: 0                                                
+  fixed_dataset: 0                                                  
+  dataset_size: 30000                                                   
+  training_rounds: 100                                                  #一共进行多少轮
+  learning_rate: 0.01                                                   #本地模型学习率
+  momentum: 0.9
+  weight_decay: 0.0005
+  adjust_lr_at_: [10,20]                                                #调整学习率的轮数，每次都缩小十倍
+  train_batch_size: 64
+  test_batch_size: 64
+  loss_function: 'CrossEntropyLoss'
+  optimizer: 'SGD'
+  is_iid: 0                                                             #本地模型的数据是否是iid的，是1不是0
+  no_iid_class_num: 2                                                   #非iid情况下 所拥有的类别数（根据客户数可能会存在不能均分的情况，但会尽可能保证均分）
+---
+data_settings:
+  data_path: "./data/"
+  dataset_name: "mnist"
+  number_of_classes: 10
+---
+LOG_settings:
+  log_path: "./mnist/log/"
+  log_level: "INFO"
+---
+backdoor_settings:
+  is_sga: 0
+  is_poison: 1                                                          #是否进行后门攻击
+  is_train: 1                                                           #是否训练触发器
+  back_rounds: 5                                                        #训练patch时的轮数
+  back_prop: 1                                                          #注入到攻击者本地数据集时的比例
+  test_back_prop: 1                                                     #测试时后门样本的比例
+  noise_percentage: 0.1                                                 
+  probability_threshold: 0.8                                            #生成触发器时触发器有效时的界限
+  max_iteration: 5                                                      #生成触发器时的最大轮数                                                  #
+  target: 5                                                             #攻击者所期望分成的类别
+  patch_lr: 0.01                                                        #触发器的大小
+  patch_type: "rectangle"
+  log_dir: "patch_attack_log.csv"
+  use_mialoss_ratio: 1                                                  #将成员推理损失添加到更新触发器时所占的比例（0-1）
+
+
+#先修改参数然后生成成员推理所用的辅助数据集，最后运行，注意可能会运行的很慢，因为在主动攻击之后每一轮都会进行成员推理，在后门训练触发器的情况下两个都非常耗时
+#感觉可以调的参数有主动攻击的间隔轮数，和一些训练后门时的参数和梯度上升时的间隔学习率，还有有些情况下后门攻击的成功率会不高，猜测可能和只用了攻击者本地的数据生成修改触发器和训练本地模型参数有关，不知道这个对成员推理的结果到底有没有影响，调整后门训练攻击轮数和每次攻击的间隔可能会有影响，还有使用本地数据的比例
+
